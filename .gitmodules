@@ -4,3 +4,6 @@
 [submodule "libpng"]
 	path = libpng
 	url = https://github.com/glennrp/libpng
+[submodule "libjpeg"]
+	path = libjpeg
+	url = https://github.com/LuaDist/libjpeg

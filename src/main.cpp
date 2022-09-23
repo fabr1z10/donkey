@@ -1,6 +1,6 @@
 #include <pybind11/pybind11.h>
 
-//#define cimg_use_jpeg
+#define cimg_use_jpeg
 #define cimg_use_png
 #define cimg_display 0
 
