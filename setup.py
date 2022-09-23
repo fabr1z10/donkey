@@ -1,11 +1,17 @@
 import os
 import re
 import subprocess
-
+import sys
 
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
 
+PLAT_TO_CMAKE = {
+    "win32": "Win32",
+    "win-amd64": "x64",
+    "win-arm32": "ARM",
+    "win-arm64": "ARM64"
+}
 
 class CMakeExtension(Extension):
     def __init__(self, name, sourcedir = ""):
@@ -29,6 +35,7 @@ class CMakeBuild(build_ext):
         cmake_args = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
+            #f"-DPNG_SHARED=OFF",
             f"-DCMAKE_BUILD_TYPE={cfg}"         # not used by MSVC, but no harm
         ]
 
@@ -50,7 +57,22 @@ class CMakeBuild(build_ext):
                 except ImportError:
                     pass
         else:
-            exit(1)
+            single_config = any(x in cmake_generator for x in {"NMake", "Ninja"})
+            contains_arch = any(x in cmake_generator for x in {"ARM", "Win64"})
+            if not single_config and not contains_arch:
+                cmake_args += ["-A", PLAT_TO_CMAKE[self.plat_name]]
+
+            if not single_config:
+                cmake_args += [
+                    f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{cfg.upper()}={extdir}"
+                ]
+                build_args += ["--config", cfg]
+
+        if sys.platform.startswith("darwin"):
+            # cross compile support for macOS
+            archs = re.findall(r"-arch (\S+)", os.environ.get("ARCHFLAGS", ""))
+            if archs:
+                cmake_args += ["-DCMAKE_OSX_ARCHITECTURES={}".format(";".join(archs))]
 
         if "CMAKE_BUILD_PARALLEL_LEVEL" not in os.environ:
             if hasattr(self, "parallel") and self.parallel:
